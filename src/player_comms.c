@@ -38,7 +38,7 @@ static int ique_is_ready(void);
 static int ique_receive_data_length(void);
 static int ique_receive_data(unsigned char * buffer, size_t data_length);
 static int parse_received_data(unsigned char * in_buffer,  size_t total_data_received,
-							   unsigned char * out_buffer, size_t expected_data_length);
+			       unsigned char * out_buffer, size_t expected_data_length);
 
 /*
 	SEND data
