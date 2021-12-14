@@ -1,7 +1,7 @@
 /*
-    player_comms.h
+    fs.h
 
-    Copyright (c) 2018 Jbop (https://github.com/jbop1626)
+    Copyright (c) 2020 Jbop (https://github.com/jbop1626)
     This file is a part of aulon.
 
     aulon is free software: you can redistribute it and/or modify
@@ -17,18 +17,20 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef AULON_PLAYER_COMMS_H
-#define AULON_PLAYER_COMMS_H
+#ifndef AULON_FS_H
+#define AULON_FS_H
 
-#include <stdint.h>
+#define FILE_ENTRIES_START 0x2000
+#define FILE_ENTRY_SIZE    20
+#define NUM_FILE_ENTRIES   409
 
-int ique_send_chunked_data(unsigned char * data, size_t data_length);
-int ique_send_piecemeal_data(unsigned char * data, size_t data_length);
-int ique_send_command(uint32_t command, uint32_t argument);
-int ique_send_ack(void);
-
-int ique_receive_reply(unsigned char * buffer, size_t recv_length);
-
-void ique_wait_for_ready(void);
+int get_current_fs(void);
+int dump_current_fs(void);
+int read_file(const char * filename);
+int write_file(const char * filename);
+int list_file_blocks(const char * filename);
+void list_files(void);
+void print_stats(void);
+int delete_file_and_update(const char * filename);
 
 #endif

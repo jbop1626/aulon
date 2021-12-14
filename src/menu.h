@@ -20,11 +20,8 @@
 #ifndef AULON_MENU_H
 #define AULON_MENU_H
 
-void menu_loop(void);
-int get_input(char * line_buffer, int buffer_length);
-void display_help(void);
-void display_info(void);
-int execute_command(char * line, int length);
+void menu_loop(FILE * instream);
+int execute_command(char * input_line);
 
 #endif
 

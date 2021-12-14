@@ -1,5 +1,5 @@
 /*
-    player_comms.h
+    io.h
 
     Copyright (c) 2018 Jbop (https://github.com/jbop1626)
     This file is a part of aulon.
@@ -17,18 +17,19 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef AULON_PLAYER_COMMS_H
-#define AULON_PLAYER_COMMS_H
+#ifndef AULON_IO_H
+#define AULON_IO_H
 
+#include <stdio.h>
 #include <stdint.h>
 
-int ique_send_chunked_data(unsigned char * data, size_t data_length);
-int ique_send_piecemeal_data(unsigned char * data, size_t data_length);
-int ique_send_command(uint32_t command, uint32_t argument);
-int ique_send_ack(void);
-
-int ique_receive_reply(unsigned char * buffer, size_t recv_length);
-
-void ique_wait_for_ready(void);
+void print_buffer(unsigned char * buffer, unsigned int length, FILE * const outstream);
+int get_input(char * line_buffer, int buffer_length, FILE * instream);
+int open_file(FILE ** file, const char * filename, const char * mode);
+size_t get_file_size(FILE * file);
+int file_size_check(FILE * file, size_t expected_size);
+uint32_t uchars_to_uint32(unsigned char * bytes);
+int32_t uchars_to_int32(unsigned char * bytes);
+int16_t uchars_to_int16(unsigned char * bytes);
 
 #endif

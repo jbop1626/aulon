@@ -1,7 +1,7 @@
 /*
     menu_func.h
 
-    Copyright (c) 2018 Jbop (https://github.com/jbop1626)
+    Copyright (c) 2018,2020 Jbop (https://github.com/jbop1626)
     This file is a part of aulon.
 
     aulon is free software: you can redistribute it and/or modify
@@ -20,10 +20,30 @@
 #ifndef AULON_MENU_FUNC_H
 #define AULON_MENU_FUNC_H
 
+// Positions in NAND
+enum {
+    NAND_START = 0x00, // Start of NAND (obviously)
+    FILE_START = 0x40  // After the SKSA area, where the files/filesystem begin
+};
+
 int Init(void);
-int Close(void);
-int DumpNand(void);
 int GetBBID(void);
+int SetLED(char * line);
+int SignHash(char * line);
+int SetTime(void);
+int ListFileBlocks(char * line);
+int ListFiles(void);
+int DumpCurrentFS(void);
+int DumpNand(void);
+int ReadSingleBlock(char * line);
+int WriteNand(int block_start);
+int WriteSingleBlock(char * line);
+int ReadFile(char * line);
+int WriteFile(char * line);
+int DeleteFile(char * line);
+int PrintStats(void);
+int Close(void);
+
 
 #endif
 

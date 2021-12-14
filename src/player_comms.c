@@ -2,7 +2,7 @@
     player_comms.c
     the basic communication and data transfer protocol used by the iQue Player.
 
-    Copyright (c) 2018 Jbop (https://github.com/jbop1626)
+    Copyright (c) 2018,2020,2021 Jbop (https://github.com/jbop1626)
     This file is a part of aulon.
 
     aulon is free software: you can redistribute it and/or modify
@@ -19,26 +19,31 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #ifdef _WIN32
-    #include <winsock2.h>
+#include <winsock2.h>
 #else
-    #include <arpa/inet.h>
+#include <arpa/inet.h>
 #endif
 
 #include "usb.h"
 #include "player_comms.h"
+#include "io.h"
 
-#define PACKET_SIZE 0x40 // #define because this is used as the declared length of an array
+
+#define PACKET_SIZE 0x80  // #define because this is used as the declared length of an array
 static const unsigned char SEND_CHUNK_SIGNAL = 0x63;
+static const unsigned char READY_SIGNAL[4] = { 0x15, 0, 0, 0 };
 
 static int ique_is_ready(void);
-static int ique_receive_data_length(void);
+static size_t ique_receive_data_length(void);
 static int ique_receive_data(unsigned char * buffer, size_t data_length);
 static int parse_received_data(unsigned char * in_buffer,  size_t total_data_received,
                                unsigned char * out_buffer, size_t expected_data_length);
+static void process_piecemeal_data(unsigned char * input, size_t input_length, unsigned char * output);
 
 /*
     SEND data
@@ -62,15 +67,15 @@ static int parse_received_data(unsigned char * in_buffer,  size_t total_data_rec
 
 int ique_send_chunked_data(unsigned char * data, size_t data_length) {
     unsigned char chunk_buffer[0x100] = { SEND_CHUNK_SIGNAL };
-    unsigned int remaining_data = data_length;
+    size_t remaining_data = data_length;
     unsigned int offset = 0;
-    int transferred;
+    int transferred = 0;
 
     while (remaining_data) {
         unsigned char chunk_length = (remaining_data >= 0xFE) ? 0xFE : (unsigned char)remaining_data;
         chunk_buffer[1] = chunk_length;
         memcpy(chunk_buffer + 2, data + offset, chunk_length);
-        if (!usb_bulk_transfer_send(chunk_buffer, chunk_length + 2, &transferred, 0)) {
+        if (!usb_bulk_transfer_send(chunk_buffer, chunk_length + 2, &transferred, 1000)) {
             fprintf(stderr, "Error when sending chunk of data to the player.\n");
             return 0;
         }
@@ -84,28 +89,17 @@ int ique_send_chunked_data(unsigned char * data, size_t data_length) {
 
 int ique_send_piecemeal_data(unsigned char * data, size_t data_length) {
     // data_length + space for tags every 3 bytes
-    size_t send_data_length = data_length + (data_length / 3) + (data_length % 3 != 0); 
+    size_t send_data_length = (data_length) + (data_length / 3) + (data_length % 3 != 0); 
     unsigned char * send_data = calloc(send_data_length, sizeof(unsigned char));
     if (send_data == NULL) {
         fprintf(stderr, "calloc failed when sending data.\n");
         return 0;
     }
+    
+    process_piecemeal_data(data, data_length, send_data);
 
-    size_t remaining_data = data_length;
-    size_t send_offset = 0;
-    size_t in_offset = 0;
-    while (remaining_data) {
-        unsigned char bytes_processed = (remaining_data >= 3) ? 3 : (unsigned char)remaining_data;
-        send_data[send_offset] = 0x40 + bytes_processed;
-        memcpy(send_data + send_offset + 1, data + in_offset, bytes_processed);
-
-        send_offset += bytes_processed + 1;
-        in_offset += bytes_processed;
-        remaining_data -= bytes_processed;
-    }   
-
-    int transferred;
-    if (!usb_bulk_transfer_send(send_data, send_data_length, &transferred, 0)) {
+    int transferred = 0;
+    if (!usb_bulk_transfer_send(send_data, send_data_length, &transferred, 1000)) {
         fprintf(stderr, "Error when sending piecemeal data to the player.\n");
         free(send_data);
         return 0;
@@ -116,17 +110,33 @@ int ique_send_piecemeal_data(unsigned char * data, size_t data_length) {
 }
 
 
+static void process_piecemeal_data(unsigned char * input, size_t input_length, unsigned char * output) {
+    size_t remaining_data = input_length;
+    size_t output_offset = 0;
+    size_t input_offset = 0;
+    while (remaining_data) {
+        unsigned char bytes_in_section = (remaining_data >= 3) ? 3 : (unsigned char)remaining_data;
+        output[output_offset] = 0x40 + bytes_in_section;
+        memcpy(output + output_offset + 1, input + input_offset, bytes_in_section);
+
+        output_offset += bytes_in_section + 1;
+        input_offset += bytes_in_section;
+        remaining_data -= bytes_in_section;
+    }   
+}
+
+
 int ique_send_command(uint32_t command, uint32_t argument) {
+    ique_wait_for_ready();
     uint32_t message[2] = { htonl(command), htonl(argument) };
     return ique_send_piecemeal_data((unsigned char *)message, 8);
 }
 
 
 int ique_send_ack(void) {
-    int transferred;
+    int transferred = 0;
     unsigned char ack = 0x44;
-
-    return usb_bulk_transfer_send(&ack, 1, &transferred, 0);
+    return usb_bulk_transfer_send(&ack, 1, &transferred, 1000);
 }
 
 /*
@@ -143,52 +153,57 @@ int ique_send_ack(void) {
 */
 
 int ique_receive_reply(unsigned char * buffer, size_t recv_length) {
-    int data_length = ique_receive_data_length();
-    if (data_length == -1) {
+    size_t data_length = ique_receive_data_length();
+    if (data_length == 0) {
         return 0;
     }
-    if ((unsigned int)data_length > recv_length) {
-        fprintf(stderr, "Amount of data in reply exceeds the size of the allocated buffer:\n%d vs %d.\n\n", data_length, recv_length);
+    if (data_length > recv_length) {
+        fprintf(stderr, "Amount of data in reply exceeds the size of the allocated buffer:\n");
+        fprintf(stderr, "%zu vs %zu.\n\n", data_length, recv_length);
         return 0;
     }
-    return ique_receive_data(buffer, (size_t)data_length);
+    
+    return ique_receive_data(buffer, data_length);
 }
 
 
-static int ique_receive_data_length(void) {
+static size_t ique_receive_data_length(void) {
     unsigned char length_buffer[4] = { 0 };
-    int transferred;
-
-    if (!usb_bulk_transfer_receive(length_buffer, 4, &transferred, 0)) {
-        return -1;
-    }
-    if (length_buffer[0] == 0x15) {
-        // Received a ready signal instead -- try *one* more time.
-        if (!usb_bulk_transfer_receive(length_buffer, 4, &transferred, 0)) {
-            return -1;
+    int transferred = 0;
+    int r = 0;
+    
+    while (1) {
+        transferred = 0;
+        r = usb_bulk_transfer_receive(length_buffer, 4, &transferred, 1000);
+        if (r == 0 || transferred != 4) {
+            return 0;
         }
-    }
-    if (length_buffer[0] != 0x1B) {
-        fprintf(stderr, "Unknown transfer unit type encountered when receiving reply length: %x\n", length_buffer[0]);
-        return -1;
+        if (memcmp(length_buffer, READY_SIGNAL, 4) == 0) {
+            // Received a ready signal instead -- try again.
+            continue;
+        }
+        if (length_buffer[0] != 0x1B) {
+            fprintf(stderr, "Unknown transfer unit type encountered when receiving reply length: %hhx\n", length_buffer[0]);
+            return 0;
+        }
+        break;
     }
 
     length_buffer[0] = 0;
-    uint32_t data_length = ntohl(*(uint32_t *)length_buffer);
-    return data_length;
+    return uchars_to_uint32(length_buffer);
 }
 
 
 static int ique_receive_data(unsigned char * buffer, size_t data_length) {
-    // data_length + space for tags every 3 bytes (+ extra in case the player is inefficient)
-    size_t recv_buffer_length = data_length + ((data_length / 3) + 4); 
+    // data_length + space for tags every 3 bytes (+ a little extra in case the player is inefficient)
+    size_t recv_buffer_length = (data_length) + ((data_length / 3) + 16); 
     unsigned char * recv_buffer = calloc(recv_buffer_length, sizeof(unsigned char));
     if (recv_buffer == NULL) {
         fprintf(stderr, "calloc failed when receiving data.\n");
         return 0;
     }
 
-    unsigned int total_data_received = 0;
+    size_t total_data_received = 0;
     unsigned char packet[PACKET_SIZE] = { 0 };
     int transferred = PACKET_SIZE;
 
@@ -196,45 +211,50 @@ static int ique_receive_data(unsigned char * buffer, size_t data_length) {
     // This models the way USB receives packets normally and ensures all data sent
     // from the console is read -- even if its more or less than expected.
     while (transferred == PACKET_SIZE) {
-        if (usb_bulk_transfer_receive(packet, PACKET_SIZE, &transferred, 0)) {
+        transferred = 0;
+        if (usb_bulk_transfer_receive(packet, PACKET_SIZE, &transferred, 1000) &&
+            (total_data_received + transferred) <= recv_buffer_length          ) {
             memcpy(recv_buffer + total_data_received, packet, transferred);
             total_data_received += transferred;
         }
         else {
             free(recv_buffer);
-            fprintf(stderr, "Error receiving data.\n");
+            fprintf(stderr, "Error receiving data!\n");
+            fprintf(stderr, "Buffer size: %zu bytes, Data received so far: %zu bytes, Next transfer size: %d\n",
+                    recv_buffer_length, total_data_received, transferred);
             return 0;
         }
     }
 
     ique_send_ack();
-    return parse_received_data(recv_buffer, total_data_received, buffer, data_length);
+    int r = parse_received_data(recv_buffer, total_data_received, buffer, data_length);
+    free(recv_buffer);
+    return r;
 }
 
 
 static int parse_received_data(unsigned char * in_buffer,  size_t total_data_received,
                                unsigned char * out_buffer, size_t expected_data_length) {
-    unsigned int in_offset = 0;
-    unsigned int copied_data = 0;
+    size_t in_offset = 0;
+    size_t copied_data = 0;
 
     while (copied_data < expected_data_length && in_offset < total_data_received) {
-        unsigned int tu = in_buffer[in_offset];
+        unsigned char tu = in_buffer[in_offset];
         if (tu == 0x1F || tu == 0x1E || tu == 0x1D) {
-            unsigned int tu_length = tu - 0x1C;
+            size_t tu_length = tu - 0x1C;
             memcpy(out_buffer + copied_data, in_buffer + in_offset + 1, tu_length);
             copied_data += tu_length;
         }
         else {
-            fprintf(stderr, "Unknown transfer unit type encountered when parsing received data: %x\n", tu);
-            free(in_buffer);
+            fprintf(stderr, "Unknown transfer unit type encountered when parsing received data: %hhx\n", tu);
             return 0;
         }
         in_offset += 4;
     }
 
-    free(in_buffer);
     if (copied_data != expected_data_length) {
-        fprintf(stderr, "Received data is not equal to the expected transfer size.\n");
+        fprintf(stderr, "Received data is not equal to the expected transfer size:\n");
+        fprintf(stderr, "%zu vs %zu.\n\n", copied_data, expected_data_length);
         return 0;
     }
     return 1;
@@ -250,17 +270,13 @@ void ique_wait_for_ready(void) {
 
 
 static int ique_is_ready(void) {
-    const unsigned char ready_signal[4] = { 0x15, 0, 0, 0 };
     unsigned char buffer[4] = { 0 };
 
-    int transferred;
-    if (!usb_bulk_transfer_receive(buffer, 4, &transferred, 0)) {
-        return 0;
-    }
-    if (transferred < 4) {
+    int transferred = 0;
+    if (!usb_bulk_transfer_receive(buffer, 4, &transferred, 1000) || (transferred < 4)) {
         return 0;
     }
 
-    return memcmp(buffer, ready_signal, 4) == 0;
+    return memcmp(buffer, READY_SIGNAL, 4) == 0;
 }
 

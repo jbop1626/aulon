@@ -1,5 +1,6 @@
 /*
-    operations.h
+    defs.h
+    general definitions across aulon
 
     Copyright (c) 2018 Jbop (https://github.com/jbop1626)
     This file is a part of aulon.
@@ -17,33 +18,21 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef AULON_DEFS_H
+#define AULON_DEFS_H
 
-#ifndef AULON_OPERATIONS_H
-#define AULON_OPERATIONS_H
+#define AULON_VERSION "1.0.0"
 
-#include <stdint.h>
+// Toggle between 0 (off) and 1 (on). If on, commands for writing both NAND
+// and individual files are enabled. This is off by default for safety.
+#define AULON_WRITING_ENABLED 0
 
-enum { 
-    BLOCK_SIZE       = 0x4000,
-    BLOCK_CHUNK_SIZE = 0x1000,
-    CHUNKS_PER_BLOCK = 4,
-    NUM_BLOCKS       = 0x1000,
-    SPARE_SIZE       = 0x10
-};
-
-/*
-    I/O
-*/
-void print_buffer(unsigned char * buffer, unsigned int length);
-int open_file(FILE ** file, const char * filename, const char * mode);
-int dump_nand_and_spare_to_files(FILE * nand_file, FILE * spare_file);
-
-/*
-    COMMANDS
-*/
-int read_block_only(unsigned char * block_buffer, uint32_t block_number);
-int read_block_spare(unsigned char * block_buffer, unsigned char * spare_buffer, uint32_t block_number);
-int get_bbid(uint32_t * bbid_out);
+// Toggle between 0 (off) and 1 (on). If on, aulon takes an optional command
+// line argument "-l <path_to_log_file>". Each usb transfer is appended to
+// the log file with direction and length information (this is important to
+// remember if you are e.g. dumping a NAND -- the entirety of the NAND and
+// then some will be written to the log in addition to the regular dump file!).
+#define AULON_LOGGING_ENABLED 0
 
 #endif
 

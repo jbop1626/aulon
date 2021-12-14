@@ -1,0 +1,1 @@
+Put libusb.h and libusb-1.0.lib in this directory before building.

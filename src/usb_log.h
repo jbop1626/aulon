@@ -1,5 +1,6 @@
 /*
-    player_comms.h
+    usb_log.h
+    functions for writing USB communications to a log file
 
     Copyright (c) 2018 Jbop (https://github.com/jbop1626)
     This file is a part of aulon.
@@ -17,18 +18,13 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef AULON_PLAYER_COMMS_H
-#define AULON_PLAYER_COMMS_H
+#ifndef AULON_USB_LOG_H
+#define AULON_USB_LOG_H
 
-#include <stdint.h>
-
-int ique_send_chunked_data(unsigned char * data, size_t data_length);
-int ique_send_piecemeal_data(unsigned char * data, size_t data_length);
-int ique_send_command(uint32_t command, uint32_t argument);
-int ique_send_ack(void);
-
-int ique_receive_reply(unsigned char * buffer, size_t recv_length);
-
-void ique_wait_for_ready(void);
+void usb_log_set_path(char * path);
+void usb_log_start(void);
+void usb_log_stop(void);
+void usb_log_comms(unsigned char * buffer, unsigned int length, int direction);
+void usb_log_error(const char * error);
 
 #endif
