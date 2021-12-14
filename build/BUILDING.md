@@ -1,11 +1,11 @@
 ### Notes
-There are two build options which can be toggled on or off in [defs.h](https://github.com/jbop1626/aulon/blob/master/src/defs.h). Writing enables writing data to the player, this is off by default for safety. Logging causes all USB transfers to be logged to a file specified by the command line argument ```-l [log file]```. This is also off by default.  
+There are two build options which can be toggled on or off in [defs.h](https://github.com/jbop1626/aulon/blob/master/src/defs.h). Writing enables writing data to the player; this is off by default for safety. Logging causes all USB transfers to be logged to a file specified by the command line argument ```-l [log file]```. This is also off by default.  
 
 ### Windows
 This guide assumes you have  Visual Studio 2017 installed. If not, you can download the Community edition for free [here](https://visualstudio.microsoft.com/downloads/).  
 
 #### Part 1: Compiling libusb  
-Compiling libusb isn't strictly necesssary -- you can download pre-built libs from the [libusb website](https://libusb.info/). However, if you have problems with the pre-built libs or want to make your own modifications, you should compile from source following the steps below.  
+Compiling libusb isn't strictly necessary -- you can download pre-built libs from the [libusb website](https://libusb.info/). However, if you have problems with the pre-built libs or want to make your own modifications, you should compile from source following the steps below.  
 
 1. Download the libusb source from [here](https://libusb.info/) or the [libusb GitHub releases page](https://github.com/libusb/libusb/releases).
 2. In the libusb source directory, open ```msvc/libusb_2017.sln``` with Visual Studio.
