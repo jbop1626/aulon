@@ -22,17 +22,17 @@ Dump the current filesystem block to ```current_fs.bin```.
 Dump the console's NAND to files on your PC. It will be saved to ```nand.bin``` and ```spare.bin``` in the current working directory.  
 ```X blk_num```
 Read one block and its spare data from the console to files.  
-```2```(*)
+```2```(\*)
 Write a full NAND to the console. This operation overwrites the SKSA {(the iQue Player OS)} area of the iQue Player's NAND, which makes it an **unsafe** operation! Use this command *only* if you need to. The files ```nand.bin``` and ```spare.bin``` will need to be in the current working directory.  
-```W```(*)
+```W```(\*)
 Write a partial NAND to the console. This overwrites all of the NAND *except* the SKSA area (in other words all files/filesystem are overwritten, but not the OS). Most of the time, this should be the preferred way to copy a NAND to the player, because it is safer than a full overwrite as well as faster. The files ```nand.bin``` and ```spare.bin``` will need to be in the current working directory.  
-```Y blk_num```(*)
+```Y blk_num```(\*)
 Write one block to the console from ```block_[blk_num].bin```.  
 ```3 file```
 Read [file] from the console.  
-```4 file```(*)
+```4 file```(\*)
 Write [file] to the console.  
-```R file```(*)
+```R file```(\*)
 Delete [file] from the console.  
 ```Q```
 Close an open connection to the console.  
@@ -45,4 +45,4 @@ List copyright and licensing information.
 ```q```
 Quit aulon.  
 
-* Available only if writing is explicitly enabled in [defs.h](https://github.com/jbop1626/aulon/blob/master/src/defs.h).
+\* Available only if writing is explicitly enabled in [defs.h](https://github.com/jbop1626/aulon/blob/master/src/defs.h).
