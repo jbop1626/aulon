@@ -29,7 +29,7 @@ Compiling libusb isn't strictly necessary -- you can download pre-built libs fro
 Make sure you have GCC and make installed.
 
 #### Part 1. Install libusb-1.0:
-This can be done on Debian, Ubuntu, etc. with:
+This can be done on Debian, Ubuntu, etc. with:  
 ```apt-get install libusb-1.0-0-dev```
 
 On Fedora and related distros, you'll have to install libusbx, which includes libusb-1.0:  
