@@ -4,7 +4,7 @@ aulon is an open-source, cross-platform tool for communicating with the [iQue Pl
 ### Installation
 On many platforms libusb should already be installed, or can easily be installed using a package manager.  
 
-On Windows you must install a libusb-compatible driver like WinUSB (see the [libusb Windows guide](https://github.com/libusb/libusb/wiki/Windows) for more information). This is most easily done with [Zadig](http://zadig.akeo.ie/). You can find the needed VID and PID [here](https://github.com/jbop1626/aulon/blob/master/src/usb.c#L34).  
+On Windows you must install a libusb-compatible driver like WinUSB (see the [libusb Windows guide](https://github.com/libusb/libusb/wiki/Windows) for more information). This is most easily done with [Zadig](http://zadig.akeo.ie/). You can find the needed VID and PID [here](https://github.com/jbop1626/aulon/blob/master/src/usb.c#L37).  
 
 If necessary, [download or compile](https://github.com/libusb/libusb/releases) a libusb-1.0 binary, make it available to the program, and then it should be good to go.  
 
